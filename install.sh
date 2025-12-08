@@ -84,7 +84,79 @@ install_dependencies() {
     done
 }
 
-# Ця функція тепер копіює вміст папки рекурсивно
+setup_dark_theme() {
+    echo -e "${BLUE}[THEME] Applying dark theme settings...${NC}"
+
+    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+    gsettings set org.gnome.desktop.interface icon-theme 'Adwaita'
+
+    mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
+
+    cat > "$HOME/.config/gtk-3.0/settings.ini" <<EOF
+[Settings]
+gtk-application-prefer-dark-theme=1
+gtk-theme-name=Adwaita-dark
+gtk-icon-theme-name=Adwaita
+gtk-font-name=Noto Sans 11
+gtk-cursor-theme-name=Adwaita
+gtk-cursor-theme-size=24
+gtk-toolbar-style=GTK_TOOLBAR_BOTH
+gtk-toolbar-icon-size=GTK_ICON_SIZE_LARGE_TOOLBAR
+gtk-button-images=1
+gtk-menu-images=1
+gtk-enable-event-sounds=1
+gtk-enable-input-feedback-sounds=1
+gtk-xft-antialias=1
+gtk-xft-hinting=1
+gtk-xft-hintstyle=hintmedium
+EOF
+
+    cat > "$HOME/.config/gtk-4.0/settings.ini" <<EOF
+[Settings]
+gtk-application-prefer-dark-theme=1
+gtk-theme-name=Adwaita-dark
+gtk-icon-theme-name=Adwaita
+gtk-font-name=Noto Sans 11
+gtk-cursor-theme-name=Adwaita
+EOF
+
+    echo -e "${GREEN}[OK] Dark theme applied for GTK apps.${NC}"
+}
+
+fix_kde_menus() {
+    echo -e "${BLUE}[FIX] Fixing KDE app associations (Dolphin)...${NC}"
+
+    # Method 1: The Symlink Hack (Most reliable for Arch)
+    # Makes 'arch-applications.menu' the default 'applications.menu'
+    if [ -f "/etc/xdg/menus/arch-applications.menu" ]; then
+        echo -e "${BLUE}[INFO] Symlinking Arch menu to default...${NC}"
+
+        # Backup existing menu if it exists and isn't already a symlink
+        if [ -f "/etc/xdg/menus/applications.menu" ] && [ ! -L "/etc/xdg/menus/applications.menu" ]; then
+            sudo mv /etc/xdg/menus/applications.menu /etc/xdg/menus/applications.menu.backup
+        fi
+
+        # Create the symlink
+        sudo ln -sf /etc/xdg/menus/arch-applications.menu /etc/xdg/menus/applications.menu
+        echo -e "${GREEN}[OK] Menu symlinked.${NC}"
+    fi
+
+    # Method 2: Rebuild Cache (Just in case)
+    # Set the variable temporarily for the rebuild process
+    export XDG_MENU_PREFIX=arch-
+
+    if command -v kbuildsycoca6 &> /dev/null; then
+        kbuildsycoca6 --noincremental &> /dev/null
+        echo -e "${GREEN}[OK] KDE Cache (v6) rebuilt.${NC}"
+    elif command -v kbuildsycoca5 &> /dev/null; then
+        kbuildsycoca5 --noincremental &> /dev/null
+        echo -e "${GREEN}[OK] KDE Cache (v5) rebuilt.${NC}"
+    else
+        echo -e "\033[0;31m[WARNING] kbuildsycoca not found.${NC}"
+    fi
+}
+
 copy_directory() {
     SRC="$REPO_ROOT/$1"
     DEST="$2"
@@ -94,8 +166,6 @@ copy_directory() {
     if [ -d "$SRC" ]; then
         [ ! -d "$DEST" ] && mkdir -p "$DEST"
 
-        # Використовуємо /. щоб скопіювати ВМІСТ папки (включно з прихованими файлами)
-        # Прапорці: -r (рекурсивно), -f (форсувати перезапис)
         cp -rf "$SRC"/. "$DEST"
 
         echo -e "${GREEN}Copied content from $1 to $DEST${NC}"
@@ -133,6 +203,9 @@ echo -e "${BLUE}[EXEC] Setting permissions...${NC}"
 # Робимо всі скрипти в Waybar та Hyprland виконуваними (рекурсивно)
 [ -d "$HOME/.config/waybar" ] && find "$HOME/.config/waybar" -name "*.sh" -exec chmod +x {} \;
 [ -d "$HOME/.config/hypr" ] && find "$HOME/.config/hypr" -name "*.sh" -exec chmod +x {} \;
+
+setup_dark_theme
+fix_kde_menus
 
 echo -e "${BLUE}[EXEC] Updating font cache...${NC}"
 fc-cache -f -v > /dev/null 2>&1
