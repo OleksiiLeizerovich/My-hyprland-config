@@ -33,7 +33,7 @@ DEPENDENCIES=(
     "qt5-wayland"       "qt6-wayland" "qt6ct" "nwg-look"
 
     # --- Utilities ---
-    "dolphin"           # File Manager
+    "thunar"            # File Manager
     "kate"              # Text Editor (KDE)
     "ark"               # Archive Manager (KDE)
     "7zip"              # Backend for .7z files (Required for Ark)
@@ -124,39 +124,6 @@ EOF
     echo -e "${GREEN}[OK] Dark theme applied for GTK apps.${NC}"
 }
 
-fix_kde_menus() {
-    echo -e "${BLUE}[FIX] Fixing KDE app associations (Dolphin)...${NC}"
-
-    # Method 1: The Symlink Hack (Most reliable for Arch)
-    # Makes 'arch-applications.menu' the default 'applications.menu'
-    if [ -f "/etc/xdg/menus/arch-applications.menu" ]; then
-        echo -e "${BLUE}[INFO] Symlinking Arch menu to default...${NC}"
-
-        # Backup existing menu if it exists and isn't already a symlink
-        if [ -f "/etc/xdg/menus/applications.menu" ] && [ ! -L "/etc/xdg/menus/applications.menu" ]; then
-            sudo mv /etc/xdg/menus/applications.menu /etc/xdg/menus/applications.menu.backup
-        fi
-
-        # Create the symlink
-        sudo ln -sf /etc/xdg/menus/arch-applications.menu /etc/xdg/menus/applications.menu
-        echo -e "${GREEN}[OK] Menu symlinked.${NC}"
-    fi
-
-    # Method 2: Rebuild Cache (Just in case)
-    # Set the variable temporarily for the rebuild process
-    export XDG_MENU_PREFIX=arch-
-
-    if command -v kbuildsycoca6 &> /dev/null; then
-        kbuildsycoca6 --noincremental &> /dev/null
-        echo -e "${GREEN}[OK] KDE Cache (v6) rebuilt.${NC}"
-    elif command -v kbuildsycoca5 &> /dev/null; then
-        kbuildsycoca5 --noincremental &> /dev/null
-        echo -e "${GREEN}[OK] KDE Cache (v5) rebuilt.${NC}"
-    else
-        echo -e "\033[0;31m[WARNING] kbuildsycoca not found.${NC}"
-    fi
-}
-
 copy_directory() {
     SRC="$REPO_ROOT/$1"
     DEST="$2"
@@ -204,8 +171,8 @@ echo -e "${BLUE}[EXEC] Setting permissions...${NC}"
 [ -d "$HOME/.config/waybar" ] && find "$HOME/.config/waybar" -name "*.sh" -exec chmod +x {} \;
 [ -d "$HOME/.config/hypr" ] && find "$HOME/.config/hypr" -name "*.sh" -exec chmod +x {} \;
 
+# Applying GTK Dark Theme (Works perfectly for Nautilus)
 setup_dark_theme
-fix_kde_menus
 
 echo -e "${BLUE}[EXEC] Updating font cache...${NC}"
 fc-cache -f -v > /dev/null 2>&1
