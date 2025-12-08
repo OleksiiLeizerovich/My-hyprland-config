@@ -84,24 +84,24 @@ install_dependencies() {
     done
 }
 
-copy_config_file() {
-    SRC="$REPO_ROOT/$1"; DEST="$2"; DEST_DIR=$(dirname "$DEST")
-    echo -e "${BLUE}[COPY] Processing $1...${NC}"
-    if [ -f "$SRC" ]; then
-        [ ! -d "$DEST_DIR" ] && mkdir -p "$DEST_DIR"
-        if [ -f "$DEST" ] && ! cmp -s "$SRC" "$DEST"; then mv "$DEST" "$DEST.backup.$(date +%s)"; cp "$SRC" "$DEST"; echo -e "${GREEN}Updated!${NC}";
-        elif [ ! -f "$DEST" ]; then cp "$SRC" "$DEST"; echo -e "${GREEN}Copied!${NC}"; else echo "Skipping identical file."; fi
-    else echo "Warning: File $SRC missing."; fi
-}
-
+# Ця функція тепер копіює вміст папки рекурсивно
 copy_directory() {
-    SRC="$REPO_ROOT/$1"; DEST="$2"
-    echo -e "${BLUE}[COPY] Directory $1...${NC}"
+    SRC="$REPO_ROOT/$1"
+    DEST="$2"
+
+    echo -e "${BLUE}[COPY] Processing Directory: $1...${NC}"
+
     if [ -d "$SRC" ]; then
         [ ! -d "$DEST" ] && mkdir -p "$DEST"
-        cp -r "$SRC"/* "$DEST"
-        echo -e "${GREEN}Copied recursively!${NC}"
-    else echo "Warning: Directory $SRC missing."; fi
+
+        # Використовуємо /. щоб скопіювати ВМІСТ папки (включно з прихованими файлами)
+        # Прапорці: -r (рекурсивно), -f (форсувати перезапис)
+        cp -rf "$SRC"/. "$DEST"
+
+        echo -e "${GREEN}Copied content from $1 to $DEST${NC}"
+    else
+        echo -e "\033[0;31m[WARNING] Directory $SRC missing. Skipping.${NC}"
+    fi
 }
 
 # --- BLOCK 3: Execution ---
@@ -109,22 +109,29 @@ copy_directory() {
 # 1. Install
 install_dependencies
 
-# 2. Copy Configs
+# 2. Copy Configs (Full Directories)
+echo -e "${BLUE}[COPY] Copying configuration directories...${NC}"
+
+# Hyprland configs
 copy_directory ".config/hypr" "$HOME/.config/hypr"
-copy_config_file ".config/kitty/kitty.conf" "$HOME/.config/kitty/kitty.conf"
-copy_config_file ".config/kitty/GruvBox_DarkHard.conf" "$HOME/.config/kitty/GruvBox_DarkHard.conf"
-copy_config_file ".config/wlogout/layout" "$HOME/.config/wlogout/layout"
-copy_config_file ".config/waybar/config" "$HOME/.config/waybar/config"
-copy_config_file ".config/waybar/style.css" "$HOME/.config/waybar/style.css"
-copy_directory ".config/waybar/scripts" "$HOME/.config/waybar/scripts"
-copy_directory ".config/waybar/assets" "$HOME/.config/waybar/assets"
-copy_directory ".config/waybar/themes" "$HOME/.config/waybar/themes"
-copy_config_file ".config/wofi/config" "$HOME/.config/wofi/config"
-copy_config_file ".config/wofi/menu.css" "$HOME/.config/wofi/menu.css"
+
+# Kitty configs (includes kitty.conf and themes)
+copy_directory ".config/kitty" "$HOME/.config/kitty"
+
+# Wlogout configs (includes layout and icons)
+copy_directory ".config/wlogout" "$HOME/.config/wlogout"
+
+# Waybar configs (includes config, style.css, scripts, assets, themes)
+copy_directory ".config/waybar" "$HOME/.config/waybar"
+
+# Wofi configs (includes config and css)
+copy_directory ".config/wofi" "$HOME/.config/wofi"
+
 
 # 3. Post-Processing
 echo -e "${BLUE}[EXEC] Setting permissions...${NC}"
-[ -d "$HOME/.config/waybar/scripts" ] && chmod +x "$HOME/.config/waybar/scripts/"*.sh
+# Робимо всі скрипти в Waybar та Hyprland виконуваними (рекурсивно)
+[ -d "$HOME/.config/waybar" ] && find "$HOME/.config/waybar" -name "*.sh" -exec chmod +x {} \;
 [ -d "$HOME/.config/hypr" ] && find "$HOME/.config/hypr" -name "*.sh" -exec chmod +x {} \;
 
 echo -e "${BLUE}[EXEC] Updating font cache...${NC}"
@@ -133,6 +140,7 @@ fc-cache -f -v > /dev/null 2>&1
 echo -e "${BLUE}[EXEC] Generating Pywal colors...${NC}"
 WALLPAPER="$HOME/.config/hypr/wallpapers/wall2.png"
 if [ -f "$WALLPAPER" ]; then
+    # -n: skip setting wallpaper (just generate colors)
     wal -i "$WALLPAPER" -n > /dev/null
     echo -e "${GREEN}Palette generated!${NC}"
 else
@@ -144,4 +152,4 @@ echo -e "${BLUE}[SYSTEM] Enabling services...${NC}"
 ! systemctl is-enabled NetworkManager &> /dev/null && sudo systemctl enable NetworkManager && sudo systemctl start NetworkManager
 ! systemctl is-enabled bluetooth &> /dev/null && sudo systemctl enable bluetooth && sudo systemctl start bluetooth
 
-echo -e "${GREEN}[DONE] Reboot recommended!${NC}"
+echo -e "${GREEN}[DONE] Setup complete. Reboot recommended!${NC}"
