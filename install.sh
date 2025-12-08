@@ -34,6 +34,11 @@ DEPENDENCIES=(
 
     # --- Utilities ---
     "dolphin"           # File Manager
+    "kate"              # Text Editor (KDE)
+    "ark"               # Archive Manager (KDE)
+    "7zip"              # Backend for .7z files (Required for Ark)
+    "unrar"             # Backend for .rar files (Required for Ark)
+
     "kdeconnect"        # Phone integration
     "polkit-gnome"      # Authentication Agent
     "gammastep"         # Blue light filter
@@ -56,7 +61,7 @@ DEPENDENCIES=(
     # --- Fonts & Icons ---
     "ttf-nerd-fonts-symbols"
     "apple-fonts"                # SF Pro Display (AUR)
-    "ttf-source-code-pro-nerd"
+    "ttf-sourcecodepro-nerd"     # Correct package name for Arch
     "ttf-jetbrains-mono-nerd"
     "noto-fonts"                 # Base fonts
     "noto-fonts-emoji"           # Emoji fonts
