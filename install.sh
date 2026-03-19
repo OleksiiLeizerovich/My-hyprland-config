@@ -223,6 +223,7 @@ declare -A CONFIG_MAP=(
     [".config/wlogout"]="$HOME/.config/wlogout"
     [".config/waybar"]="$HOME/.config/waybar"
     [".config/wofi"]="$HOME/.config/wofi"
+    [".config/xdg-desktop-portal"]="$HOME/.config/xdg-desktop-portal"
 )
 
 for SRC in "${!CONFIG_MAP[@]}"; do
